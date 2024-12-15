@@ -5,7 +5,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const app = express();
 const port = 3000;
-const workoutRouter = require("./Backend/router/workoutRouter");
+const workoutRouter = require("./router/workoutRouter");
+const loginRouter = require("./router/userRouter");
 const mongoDB = process.env.DB_URI;
 
 mongoose.connect(mongoDB);
@@ -15,6 +16,7 @@ app.use(express.json()); // middleware to accept json request bodies
 app.use(cors()); // allows requests from cross-origin (not same origin)
 
 app.use("/workout", workoutRouter);
+app.use("/login", loginRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
