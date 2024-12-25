@@ -1,3 +1,4 @@
+const Loginmodel = require("../model/Loginmodel");
 const userSchema = require("../model/Loginmodel");
 
 const login = async (req, res) => {
@@ -13,4 +14,19 @@ const login = async (req, res) => {
   res.json({ id: user._id, email: user.email });
 };
 
-module.exports = { login };
+const signup = async (req, res) => {
+  const { password, email } = req.body;
+  const existingUser = await Loginmodel.findOne({ email });
+  if (existingUser) {
+    return res.status(400).json({
+      message: "Email already exists. Please use a different email.",
+    });
+  }
+  const newUser = await Loginmodel.create({
+    email,
+    password,
+  });
+  return res.status(201).json({ message: "Signup successful!", user: newUser });
+};
+
+module.exports = { login, signup };
