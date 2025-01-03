@@ -1,8 +1,17 @@
 const { model } = require("mongoose");
 const workOutModel = require("../model/workoutmodel");
+const Loginmodel = require("../model/Loginmodel");
 
+// get user today workout only
 const getTodayWorkout = async (req, res) => {
   try {
+    const { user } = req.body;
+
+    const loginUser = await Loginmodel.findOne({ email: user });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -10,6 +19,7 @@ const getTodayWorkout = async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const workouts = await workOutModel.find({
+      user: loginUser._id,
       date: { $gte: startOfDay, $lte: endOfDay },
     });
 
@@ -23,12 +33,18 @@ const getTodayWorkout = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch workouts." });
   }
 };
+
+//delete one workout from user
 const deleteOne = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.body;
     if (!id) return res.status(400).json({ error: "Workout ID is required" });
 
-    const deletedWorkout = await workOutModel.findByIdAndDelete(id);
+    const deletedWorkout = await workOutModel.findByIdAndDelete({
+      _id: id,
+      user: userId,
+    });
     if (!deletedWorkout)
       return res.status(404).json({ error: "Workout not found" });
 
@@ -39,9 +55,15 @@ const deleteOne = async (req, res) => {
   }
 };
 
+//create a workout
 const createWorkout = async (req, res) => {
   try {
-    const { name, duration, caloriesBurned } = req.body;
+    const { name, duration, caloriesBurned, user } = req.body;
+
+    const loginUser = await Loginmodel.findOne({ email: user });
+    if (!loginUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -50,6 +72,7 @@ const createWorkout = async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const existingWorkout = await workOutModel.findOne({
+      user: loginUser._id,
       name,
       date: { $gte: startOfDay, $lte: endOfDay },
     });
@@ -61,13 +84,14 @@ const createWorkout = async (req, res) => {
     }
 
     const workout = new workOutModel({
+      user: loginUser._id,
       name,
       duration,
       caloriesBurned,
       date: new Date(),
     });
-
     await workout.save();
+
     res.status(201).json({ message: "Workout added successfully!", workout });
     console.log("Workout saved successfully!");
   } catch (error) {
@@ -76,17 +100,25 @@ const createWorkout = async (req, res) => {
   }
 };
 
+//find all the workout for the user
 const getallWorkout = async (req, res) => {
   try {
-    const workouts = await workOutModel.find();
+    const { user } = req.body;
+    const loginUser = await Loginmodel.findOne({ email: user });
+    if (!loginUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const workouts = await workOutModel.find({ user: loginUser._id });
     res.status(200).json(workouts);
   } catch (err) {
     console.log(err);
   }
 };
 
+//update workout for the specific
 const updateWorkout = async (req, res) => {
   const { id } = req.params;
+  const userId = req.body;
   if (!id) return res.status(400).json("Invalid Request");
 
   const { name, duration, caloriesBurned } = req.body;
@@ -95,13 +127,15 @@ const updateWorkout = async (req, res) => {
     ...(duration && { duration }),
     ...(caloriesBurned && { caloriesBurned }),
   };
-  const updatedWorkout = await workOutModel.findByIdAndUpdate(id, workout, {
-    new: true,
-  });
+  const updatedWorkout = await workOutModel.findOneAndUpdate(
+    { _id: id, user: userId },
+    workout,
+    { new: true }
+  );
 
   console.log(updatedWorkout);
 
-  if (!updatedWorkout) return res.status(400).json("Todo not found");
+  if (!updatedWorkout) return res.status(400).json("workout not found");
 
   res.json(updatedWorkout);
 };

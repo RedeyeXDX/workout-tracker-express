@@ -11,7 +11,12 @@ const login = async (req, res) => {
   if (user.password !== password)
     return res.status(400).json("Invaild Password");
 
-  res.json({ id: user._id, email: user.email });
+  res.json({
+    user: {
+      email: user.email,
+      password: user.password,
+    },
+  });
 };
 
 const signup = async (req, res) => {
